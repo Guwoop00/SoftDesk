@@ -1,0 +1,12 @@
+# MacOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+
+# Base de données
+db.sqlite3

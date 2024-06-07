@@ -1,5 +1,4 @@
 from django.db import models
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 import uuid
 from typing import Optional
@@ -35,7 +34,7 @@ class Project(models.Model):
         created_time (datetime)
     """
 
-    title: str = models.CharField(max_length=100)
+    title: str = models.CharField(max_length=50)
     description: str = models.TextField()
     type: str = models.CharField(
         max_length=10,
@@ -46,9 +45,7 @@ class Project(models.Model):
             ("ANDROID", "Android"),
         ],
     )
-    author: CustomUser = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL, related_name="projects", on_delete=models.CASCADE
-    )
+    author: CustomUser = models.ForeignKey(CustomUser, related_name="projects", on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
@@ -66,17 +63,12 @@ class Contributor(models.Model):
     """
 
     user: CustomUser = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
+        CustomUser,
         related_name="contributions",
         on_delete=models.CASCADE,
     )
     project: Project = models.ForeignKey(
         Project, related_name="contributors", on_delete=models.CASCADE
-    )
-    role: str = models.CharField(
-        max_length=15,
-        choices=[("AUTHOR", "Author"), ("CONTRIBUTOR", "Contributor")],
-        default="CONTRIBUTOR",
     )
 
     class Meta:
@@ -102,7 +94,7 @@ class Issue(models.Model):
         created_time (datetime)
     """
 
-    title: str = models.CharField(max_length=100)
+    title: str = models.CharField(max_length=50)
     description: str = models.TextField()
     priority: str = models.CharField(
         max_length=10, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")]
@@ -124,12 +116,12 @@ class Issue(models.Model):
         Project, related_name="issues", on_delete=models.CASCADE
     )
     author: CustomUser = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
+        CustomUser,
         related_name="created_issues",
         on_delete=models.CASCADE,
     )
     assignee: Optional[CustomUser] = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
+        CustomUser,
         related_name="assigned_issues",
         null=True,
         blank=True,
@@ -158,7 +150,7 @@ class Comment(models.Model):
         Issue, related_name="comments", on_delete=models.CASCADE
     )
     author: CustomUser = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL, related_name="comments", on_delete=models.CASCADE
+        CustomUser, related_name="comments", on_delete=models.CASCADE
     )
     created_time = models.DateTimeField(auto_now_add=True)
     uuid = models.UUIDField(

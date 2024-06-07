@@ -65,8 +65,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         project = serializer.save(author=self.request.user)
         Contributor.objects.create(
-            user=self.request.user, project=project, role="AUTHOR"
-        )
+            user=self.request.user, project=project)
 
 
 class ContributorViewSet(viewsets.ModelViewSet):
@@ -112,7 +111,7 @@ class ContributorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer.save(project=project, user=user, role="CONTRIBUTOR")
+        serializer.save(project=project, user=user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs) -> Response:
@@ -135,7 +134,7 @@ class ContributorViewSet(viewsets.ModelViewSet):
         project = get_object_or_404(Project, id=project_id)
         contributor = get_object_or_404(Contributor, user_id=user_id, project=project)
 
-        if contributor.role == "AUTHOR":
+        if contributor.user == project.author:
             raise ValidationError("Project author cannot be deleted.")
 
         contributor.delete()

@@ -32,9 +32,8 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Contributor)
 class ContributorAdmin(admin.ModelAdmin):
-    list_display = ("user", "project", "role")
+    list_display = ("user", "project")
     search_fields = ("user__username", "project__title")
-    list_filter = ("role",)
 
 
 @admin.register(Issue)

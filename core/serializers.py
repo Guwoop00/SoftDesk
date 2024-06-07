@@ -1,52 +1,31 @@
 from rest_framework import serializers
 from .models import CustomUser, Contributor, Project, Issue, Comment
 from django.contrib.auth.password_validation import validate_password
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
     """
     Serializer for CustomUser model.
     """
-
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password]
-    )
-    password2 = serializers.CharField(write_only=True, required=True)
-
-    can_be_contacted = serializers.BooleanField(required=True)
-    can_data_be_shared = serializers.BooleanField(required=True)
-    age = serializers.IntegerField(required=True)
+    email: serializers.EmailField = serializers.EmailField(required=True)
+    password: serializers.CharField = serializers.CharField(write_only=True, required=True,
+                                                            validators=[validate_password])
+    password2: serializers.CharField = serializers.CharField(write_only=True, required=True)
 
     class Meta:
-        model = CustomUser
-        fields = (
-            "username",
-            "email",
-            "password",
-            "password2",
-            "can_be_contacted",
-            "can_data_be_shared",
-            "age",
-        )
+        model: Any = CustomUser
+        fields: tuple = ('username', 'email', 'password', 'password2', 'can_be_contacted', 'can_data_be_shared', 'age')
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate password and age fields.
+        Validate the passwords and age fields.
         """
-        password = attrs.get("password")
-        password2 = attrs.get("password2")
-
-        if password != password2:
-            raise serializers.ValidationError(
-                {"password": "Password fields did not match."}
-            )
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields did not match."})
 
         if attrs.get("age", 0) < 18:
-            raise serializers.ValidationError(
-                {"age": "You must be at least 18 years old to register."}
-            )
+            raise serializers.ValidationError({"age": "You must be at least 18 years old to register."})
 
         return attrs
 
@@ -54,55 +33,24 @@ class CustomUserSerializer(serializers.ModelSerializer):
         """
         Create a new CustomUser instance.
         """
-        validated_data.pop("password2")
-
-        can_be_contacted = validated_data.pop("can_be_contacted")
-        can_data_be_shared = validated_data.pop("can_data_be_shared")
-        age = validated_data.pop("age")
-
-        user = CustomUser.objects.create(
-            username=validated_data["username"],
-            email=validated_data["email"],
-            age=age,
-            can_be_contacted=can_be_contacted,
-            can_data_be_shared=can_data_be_shared,
-        )
-
-        user.set_password(validated_data["password"])
+        validated_data.pop('password2')
+        user: CustomUser = CustomUser(**validated_data)
+        user.set_password(validated_data['password'])
         user.save()
-
         return user
 
-    def update(
-        self, instance: CustomUser, validated_data: Dict[str, Any]
-    ) -> CustomUser:
+    def update(self, instance: CustomUser, validated_data: Dict[str, Any]) -> CustomUser:
         """
         Update an existing CustomUser instance.
         """
-        instance.username = validated_data.get("username", instance.username)
-        instance.email = validated_data.get("email", instance.email)
-        instance.can_be_contacted = validated_data.get(
-            "can_be_contacted", instance.can_be_contacted
-        )
-        instance.can_data_be_shared = validated_data.get(
-            "can_data_be_shared", instance.can_data_be_shared
-        )
-        instance.age = validated_data.get("age", instance.age)
+        validated_data.pop('password2', None)
+        password: Optional[str] = validated_data.pop('password', None)
 
-        if instance.age < 18:
-            raise serializers.ValidationError(
-                {"age": "You must be at least 18 years old to update this field."}
-            )
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
 
-        password = validated_data.get("password", None)
-        password2 = validated_data.get("password2", None)
-        if password and password2:
-            if password == password2:
-                instance.set_password(password)
-            else:
-                raise serializers.ValidationError(
-                    {"password": "Password fields did not match."}
-                )
+        if password:
+            instance.set_password(password)
 
         instance.save()
         return instance
@@ -114,9 +62,9 @@ class ProjectSerializer(serializers.ModelSerializer):
     """
 
     class Meta:
-        model = Project
-        fields = ["id", "title", "description", "type", "author", "created_time"]
-        read_only_fields = ["id", "author", "created_time"]
+        model: Any = Project
+        fields: list = ["id", "title", "description", "type", "author", "created_time"]
+        read_only_fields: list = ["id", "author", "created_time"]
 
 
 class ContributorSerializer(serializers.ModelSerializer):
@@ -124,12 +72,12 @@ class ContributorSerializer(serializers.ModelSerializer):
     Serializer for Contributor model.
     """
 
-    username = serializers.CharField(source="user.username", read_only=True)
+    username: serializers.CharField = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
-        model = Contributor
-        fields = ["user", "username", "project", "role"]
-        read_only_fields = ["project", "role"]
+        model: Any = Contributor
+        fields: list = ["user", "username", "project"]
+        read_only_fields: list = ["project"]
 
 
 class IssueSerializer(serializers.ModelSerializer):
@@ -137,11 +85,11 @@ class IssueSerializer(serializers.ModelSerializer):
     Serializer for Issue model.
     """
 
-    author_username = serializers.CharField(source="author.username", read_only=True)
+    author_username: serializers.CharField = serializers.CharField(source="author.username", read_only=True)
 
     class Meta:
-        model = Issue
-        fields = [
+        model: Any = Issue
+        fields: list = [
             "id",
             "title",
             "description",
@@ -154,7 +102,7 @@ class IssueSerializer(serializers.ModelSerializer):
             "assignee",
             "created_time",
         ]
-        read_only_fields = [
+        read_only_fields: list = [
             "project",
             "created_time",
             "author",
@@ -166,9 +114,9 @@ class CommentSerializer(serializers.ModelSerializer):
     Serializer for Comment model.
     """
 
-    author_username = serializers.CharField(source="author.username", read_only=True)
+    author_username: serializers.CharField = serializers.CharField(source="author.username", read_only=True)
 
     class Meta:
-        model = Comment
-        fields = ["uuid", "text", "issue", "author", "author_username"]
-        read_only_fields = ["issue", "author"]
+        model: Any = Comment
+        fields: list = ["uuid", "text", "issue", "author", "author_username"]
+        read_only_fields: list = ["issue", "author"]

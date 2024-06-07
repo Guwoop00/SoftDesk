@@ -59,7 +59,6 @@ class Contributor(models.Model):
     Attributes:
         user (CustomUser)
         project (Project)
-        role (str)
     """
 
     user: CustomUser = models.ForeignKey(

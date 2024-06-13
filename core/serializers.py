@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import CustomUser, Contributor, Project, Issue, Comment
 from django.contrib.auth.password_validation import validate_password
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -38,12 +38,12 @@ class CustomUserSerializer(serializers.ModelSerializer):
         password = attrs.get("password")
         password2 = attrs.get("password2")
 
-        if password != password2:
+        if password and password2 and password != password2:
             raise serializers.ValidationError(
                 {"password": "Password fields did not match."}
             )
 
-        if attrs.get("age", 0) < 18:
+        if "age" in attrs and attrs["age"] < 18:
             raise serializers.ValidationError(
                 {"age": "You must be at least 18 years old to register."}
             )
@@ -54,7 +54,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         """
         Create a new CustomUser instance.
         """
-        validated_data.pop('password2')
+        validated_data.pop('password2', None)
         user: CustomUser = CustomUser(**validated_data)
         user.set_password(validated_data['password'])
         user.save()
@@ -64,28 +64,29 @@ class CustomUserSerializer(serializers.ModelSerializer):
         """
         Update an existing CustomUser instance.
         """
-        password: Optional[str] = validated_data.get("password", None)
-        password2: Optional[str] = validated_data.get("password2", None)
-        age: Optional[int] = validated_data.get("age", None)
+        validated_data = self.validate(validated_data)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        password = validated_data.get("password")
+        password2 = validated_data.pop("password2", None)
 
-        if age is not None:
-            if age >= 18:
-                instance.age = age
-            else:
-                raise serializers.ValidationError(
-                    {"age": "You must be at least 18 years old to update this field."}
-                )
-
-        if password and password2:
-            if password == password2:
-                instance.set_password(password)
-            else:
+        if password or password2:
+            if password != password2:
                 raise serializers.ValidationError(
                     {"password": "Password fields did not match."}
                 )
+            instance.set_password(password)
+
+        age = validated_data.get("age")
+        if age is not None:
+            if age < 18:
+                raise serializers.ValidationError(
+                    {"age": "You must be at least 18 years old to update this field."}
+                )
+            instance.age = age
+
+        for attr, value in validated_data.items():
+            if attr != 'password':
+                setattr(instance, attr, value)
 
         instance.save()
         return instance

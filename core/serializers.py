@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import CustomUser, Contributor, Project, Issue, Comment
 from django.contrib.auth.password_validation import validate_password
 from typing import Any, Dict
+from django.contrib.auth.hashers import make_password
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -33,63 +34,47 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate password and age fields.
+        Validate that password and password2 match.
         """
-        password = attrs.get("password")
-        password2 = attrs.get("password2")
-
-        if password and password2 and password != password2:
-            raise serializers.ValidationError(
-                {"password": "Password fields did not match."}
-            )
-
-        if "age" in attrs and attrs["age"] < 18:
-            raise serializers.ValidationError(
-                {"age": "You must be at least 18 years old to register."}
-            )
-
+        if attrs.get('password') != attrs.get('password2'):
+            raise serializers.ValidationError("Password fields did not match.")
         return attrs
+
+    def validate_age(self, value: int) -> int:
+        """
+        Validate age field.
+        """
+        if value < 18:
+            raise serializers.ValidationError("You must be at least 18 years old to update this field.")
+        return value
 
     def create(self, validated_data: Dict[str, Any]) -> CustomUser:
         """
         Create a new CustomUser instance.
         """
         validated_data.pop('password2', None)
-        user: CustomUser = CustomUser(**validated_data)
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
+
+
+class CustomUserUpdateSerializer(CustomUserSerializer):
+    """
+    Serializer for updating CustomUser model.
+    """
+
+    password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=False)
+    age = serializers.IntegerField(required=False)
 
     def update(self, instance: CustomUser, validated_data: Dict[str, Any]) -> CustomUser:
         """
         Update an existing CustomUser instance.
         """
-        validated_data = self.validate(validated_data)
 
-        password = validated_data.get("password")
-        password2 = validated_data.pop("password2", None)
+        if "password" in validated_data:
+            instance.set_password(validated_data['password'])
 
-        if password or password2:
-            if password != password2:
-                raise serializers.ValidationError(
-                    {"password": "Password fields did not match."}
-                )
-            instance.set_password(password)
-
-        age = validated_data.get("age")
-        if age is not None:
-            if age < 18:
-                raise serializers.ValidationError(
-                    {"age": "You must be at least 18 years old to update this field."}
-                )
-            instance.age = age
-
-        for attr, value in validated_data.items():
-            if attr != 'password':
-                setattr(instance, attr, value)
-
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
 
 class ProjectSerializer(serializers.ModelSerializer):

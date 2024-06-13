@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from .models import CustomUser, Project, Issue, Comment, Contributor
 from .serializers import (
     CustomUserSerializer,
+    CustomUserUpdateSerializer,
     ProjectSerializer,
     ContributorSerializer,
     IssueSerializer,
@@ -26,7 +27,11 @@ class CustomUserViewSet(viewsets.ModelViewSet):
     """
 
     queryset = CustomUser.objects.all()
-    serializer_class = CustomUserSerializer
+
+    def get_serializer_class(self):
+        if self.action in ["update", "partial_update"]:
+            return CustomUserUpdateSerializer
+        return CustomUserSerializer
 
     def get_permissions(self) -> Union[AllowAny, IsAuthenticated]:
         """

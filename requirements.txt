@@ -1,5 +1,5 @@
 black==24.3.0
-Django==3.2.9
+Django==3.2.25
 djangorestframework==3.12.4
 djangorestframework-simplejwt==4.7.2
 drf-nested-routers==0.93.4

@@ -4,6 +4,32 @@ import uuid
 from typing import Optional
 
 
+TYPES = [
+    ('BACKEND', 'BACKEND'),
+    ('FRONTEND', 'FRONTEND'),
+    ('iOS', 'iOS'),
+    ('ANDROID', 'ANDROID')
+]
+
+TAGS = [
+    ('BUG', 'BUG'),
+    ('TASK', 'TASK'),
+    ('UPGRADE', 'UPGRADE')
+]
+
+PRIORITIES = [
+    ('LOW', 'LOW'),
+    ('MEDIUM', 'MEDIUM'),
+    ('HIGH', 'HIGH')
+]
+
+STATUSES = [
+    ('TODO', 'TODO'),
+    ('IN PROGRESS', 'IN PROGRESS'),
+    ('DONE', 'DONE')
+]
+
+
 class CustomUser(AbstractUser):  # cf CustomUserSerializer
     """
     Custom model for User
@@ -38,12 +64,7 @@ class Project(models.Model):
     description: str = models.TextField()
     type: str = models.CharField(
         max_length=10,
-        choices=[
-            ("BACKEND", "Back-end"),
-            ("FRONTEND", "Front-end"),
-            ("IOS", "iOS"),
-            ("ANDROID", "Android"),
-        ],
+        choices=TYPES
     )
     author: CustomUser = models.ForeignKey(CustomUser, related_name="projects", on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True)
@@ -92,24 +113,16 @@ class Issue(models.Model):
         assignee (CustomUser)
         created_time (datetime)
     """
-
     title: str = models.CharField(max_length=50)
     description: str = models.TextField()
     priority: str = models.CharField(
-        max_length=10, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")]
+        max_length=10, choices=PRIORITIES
     )
     tag: str = models.CharField(
-        max_length=10,
-        choices=[("BUG", "Bug"), ("FEATURE", "Feature"), ("TASK", "Task")],
+        max_length=10, choices=TAGS
     )
     status: str = models.CharField(
-        max_length=15,
-        choices=[
-            ("TODO", "To Do"),
-            ("IN_PROGRESS", "In Progress"),
-            ("FINISHED", "Finished"),
-        ],
-        default="TODO",
+        max_length=15, choices=STATUSES, default="TODO"
     )
     project: Project = models.ForeignKey(
         Project, related_name="issues", on_delete=models.CASCADE

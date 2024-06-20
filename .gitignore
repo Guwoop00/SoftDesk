@@ -10,3 +10,5 @@ __pycache__/
 
 # Base de données
 db.sqlite3
+
+migrations/

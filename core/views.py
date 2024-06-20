@@ -1,7 +1,6 @@
 from rest_framework import viewsets, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import CustomUser, Project, Issue, Comment, Contributor
 from .serializers import (
@@ -13,49 +12,40 @@ from .serializers import (
     CommentSerializer,
 )
 from .permissions import (
+    UserPermission,
     ProjectPermission,
-    ContributorViewsetPermission,
+    ContributorPermission,
     IssuePermission,
     CommentPermission,
 )
-from typing import Union
 
 
 class CustomUserViewSet(viewsets.ModelViewSet):
     """
     API endpoint for CustomUser.
     """
+    permission_classes = [UserPermission]
 
-    queryset = CustomUser.objects.all()
+    def get_queryset(self) -> CustomUser:
+        """
+        Returns queryset of users.
+        """
+        return CustomUser.objects.all()
 
     def get_serializer_class(self):
+        """
+        Returns the right serializer to use.
+        """
         if self.action in ["update", "partial_update"]:
             return CustomUserUpdateSerializer
         return CustomUserSerializer
-
-    def get_permissions(self) -> Union[AllowAny, IsAuthenticated]:
-        """
-        Returns permissions based on the action.
-        """
-        if self.action in ["create"]:
-            return (AllowAny(),)
-        return (IsAuthenticated(),)
-
-    def get_object(self) -> CustomUser:
-        """
-        Returns the CustomUser object based on the action.
-        """
-        if self.action in ["update", "partial_update", "destroy"]:
-            return self.request.user
-        return super().get_object()
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     API endpoint for Project.
     """
-
-    permission_classes = [ProjectPermission]
+    permission_classes = [IsAuthenticated, ProjectPermission]
     serializer_class = ProjectSerializer
 
     def get_queryset(self) -> Project:
@@ -78,16 +68,14 @@ class ContributorViewSet(viewsets.ModelViewSet):
     API endpoint for Contributor.
     """
 
-    permission_classes = [ContributorViewsetPermission]
+    permission_classes = [IsAuthenticated, ContributorPermission]
     serializer_class = ContributorSerializer
 
     def get_queryset(self) -> Contributor:
         """
         Returns queryset filtered by project.
         """
-        project_id = self.kwargs.get("project_pk")
-        project = get_object_or_404(Project, id=project_id)
-        return Contributor.objects.filter(project=project)
+        return Contributor.objects.filter(project_id=self.kwargs["project_pk"])
 
     def perform_create(self, serializer: ContributorSerializer) -> Response:
         """
@@ -97,27 +85,27 @@ class ContributorViewSet(viewsets.ModelViewSet):
         project = get_object_or_404(Project, id=project_id)
         data = self.request.data.copy()
         data["project"] = project.id
-
         serializer = ContributorSerializer(data=data)
-        if not serializer.is_valid():
+
+        if serializer.is_valid():
+            try:
+                user = CustomUser.objects.get(id=serializer.validated_data['user'].id)
+            except CustomUser.DoesNotExist:
+                return Response(
+                    {"error": "This user does not exist."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if Contributor.objects.filter(user=user, project=project).exists():
+                return Response(
+                    {"error": "This user has already been added."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer.save(project=project, user=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = CustomUser.objects.get(id=data["user"])
-        except CustomUser.DoesNotExist:
-            return Response(
-                {"error": "This user does not exist."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if Contributor.objects.filter(user=user, project=project).exists():
-            return Response(
-                {"error": "This user has already been added."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer.save(project=project, user=user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs) -> Response:
         """
@@ -139,11 +127,11 @@ class ContributorViewSet(viewsets.ModelViewSet):
         project = get_object_or_404(Project, id=project_id)
         contributor = get_object_or_404(Contributor, user_id=user_id, project=project)
 
-        if contributor.user == project.author:
-            raise ValidationError("Project author cannot be deleted.")
+        serializer = ContributorSerializer(contributor)
+        serializer.validate_delete(contributor)
 
         contributor.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response('Contributor successfully deleted.', status=status.HTTP_204_NO_CONTENT)
 
 
 class IssueViewSet(viewsets.ModelViewSet):
@@ -151,24 +139,20 @@ class IssueViewSet(viewsets.ModelViewSet):
     API endpoint for Issue.
     """
 
-    permission_classes = [IssuePermission]
+    permission_classes = [IsAuthenticated, IssuePermission]
     serializer_class = IssueSerializer
 
     def get_queryset(self) -> Issue:
         """
         Returns queryset filtered by project.
         """
-        project_id = self.kwargs.get("project_pk")
-        project = get_object_or_404(Project, id=project_id)
-        return Issue.objects.filter(project=project)
+        return Issue.objects.filter(project_id=self.kwargs["project_pk"])
 
     def perform_create(self, serializer: IssueSerializer) -> None:
         """
         Performs creation of a new issue.
         """
-        project_id = self.kwargs.get("project_pk")
-        project = get_object_or_404(Project, id=project_id)
-        serializer.save(project=project, author=self.request.user)
+        serializer.save(project_id=self.kwargs["project_pk"], author=self.request.user)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -176,21 +160,21 @@ class CommentViewSet(viewsets.ModelViewSet):
     API endpoint for Comment.
     """
 
-    permission_classes = [CommentPermission]
+    permission_classes = [IsAuthenticated, CommentPermission]
     serializer_class = CommentSerializer
 
     def get_queryset(self) -> Comment:
         """
         Returns queryset filtered by issue.
         """
-        issue_id = self.kwargs.get("issue_pk")
-        issue = get_object_or_404(Issue, id=issue_id)
-        return Comment.objects.filter(issue=issue)
+        return Comment.objects.filter(issue_id=self.kwargs["issue_pk"])
 
     def perform_create(self, serializer: CommentSerializer) -> None:
         """
         Performs creation of a new comment.
         """
+        project_id = self.kwargs.get("project_pk")
         issue_id = self.kwargs.get("issue_pk")
+        get_object_or_404(Project, id=project_id)
         issue = get_object_or_404(Issue, id=issue_id)
         serializer.save(issue=issue, author=self.request.user)

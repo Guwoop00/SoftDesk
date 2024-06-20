@@ -10,15 +10,15 @@ class CustomUserSerializer(serializers.ModelSerializer):
     Serializer for CustomUser model.
     """
 
-    email = serializers.EmailField(required=True)
+    email = serializers.EmailField()
     password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password]
+        write_only=True, validators=[validate_password]
     )
-    password2 = serializers.CharField(write_only=True, required=True)
+    password2 = serializers.CharField(write_only=True)
 
-    can_be_contacted = serializers.BooleanField(required=True)
-    can_data_be_shared = serializers.BooleanField(required=True)
-    age = serializers.IntegerField(required=True)
+    can_be_contacted = serializers.BooleanField()
+    can_data_be_shared = serializers.BooleanField()
+    age = serializers.IntegerField()
 
     class Meta:
         model = CustomUser
@@ -97,8 +97,16 @@ class ContributorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Contributor
-        fields = ["user", "username", "project"]
+        fields = ["user", "username", "project_id"]
         read_only_fields = ["project"]
+
+    def validate_delete(self, contributor):
+        """
+        Validate if the contributor can be deleted.
+        """
+        if contributor.user == contributor.project.author:
+            raise serializers.ValidationError("Project author cannot be deleted.")
+        return contributor
 
 
 class IssueSerializer(serializers.ModelSerializer):

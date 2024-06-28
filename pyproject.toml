@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "softdesk"
+version = "0.1.0"
+description = "Conception d'un API securisée"
+authors = ["Morgan Justine <morgan.justine@me.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+Django = "3.2.9"
+djangorestframework = "3.12.4"
+djangorestframework-simplejwt = "4.7.2"
+drf-nested-routers = "0.93.4"
+
+[tool.poetry.group.dev.dependencies]
+black = "24.3.0"
+flake8-html = "0.4.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -73,6 +73,8 @@ class CustomUserUpdateSerializer(CustomUserSerializer):
 
         if "password" in validated_data:
             instance.set_password(validated_data['password'])
+            instance.save()
+            validated_data.pop('password')
 
         return super().update(instance, validated_data)
 

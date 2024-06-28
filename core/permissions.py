@@ -68,9 +68,11 @@ class IssuePermission(BasePermission):
 
     def has_permission(self, request: HttpRequest, view: ViewSet) -> bool:
         project = Project.objects.get(id=view.kwargs["project_pk"])
+
         if view.action in ["update", "partial_update", "destroy"]:
             issue = Issue.objects.get(id=view.kwargs["pk"], project=project)
             return request.user == issue.author
+
         return Contributor.objects.filter(
             user=request.user, project=project
         ).exists()
@@ -85,9 +87,11 @@ class CommentPermission(BasePermission):
     def has_permission(self, request: HttpRequest, view: ViewSet) -> bool:
         project = Project.objects.get(id=view.kwargs["project_pk"])
         issue = Issue.objects.get(id=view.kwargs["issue_pk"])
+
         if view.action in ["update", "partial_update", "destroy"]:
             comment = Comment.objects.get(uuid=view.kwargs["pk"], issue=issue)
             return request.user == comment.author
+
         return Contributor.objects.filter(
             user=request.user, project=project
         ).exists()

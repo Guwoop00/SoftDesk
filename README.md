@@ -12,19 +12,12 @@ Navigate to the desired folder.
 git clone https://github.com/Guwoop00/SoftDesk
 ```
 
-###### • Activate the virtual environment
+###### • Activate the virtual environment and install the required packages
 
 ```
-python -m venv env 
-env\Scripts\activate
+poetry install
+poetry shell
 ```
-
-###### • Install the required packages
-
-```
-pip install -r requirements.txt
-```
-
 
 ### MacOS et Linux :
 Navigate to the desired folder.
@@ -33,15 +26,11 @@ Navigate to the desired folder.
 git clone https://github.com/Guwoop00/SoftDesk
 ```
 
-###### • Activate the virtual environment
-```
-python3 -m venv env 
-source env/bin/activate
-```
+###### • Activate the virtual environment and install the required packages
 
-###### • Install the required packages
 ```
-pip install -r requirements.txt
+poetry install
+poetry shell
 ```
 
 ## Usage
